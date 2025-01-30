@@ -1,4 +1,4 @@
-[![preview](https://i.imgur.com/lCUasBs.png
+[![preview](https://i.imgur.com/DOsBG7K.png
 )](https://uhmegle.com/)
 
 # 🌐 Uhmegle IP Sniffer Extension | Educational Use Only 🚨
