@@ -35,14 +35,12 @@ function initializeExtension() {
         element.innerHTML = content;
       }
 
-      // Store original values for cleanup
       const originalValues = {
         observer: null,
         RTCPeerConnection: window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection
       };
 
       function startMonitoring() {
-        // Mutation Observer
         originalValues.observer = new MutationObserver(() => {
           const monitoredDiv = document.querySelector('.monitoredSec1');
           if (monitoredDiv) {
@@ -52,7 +50,6 @@ function initializeExtension() {
         });
         originalValues.observer.observe(document.body, { childList: true, subtree: true });
 
-        // WebRTC Monitoring
         if (originalValues.RTCPeerConnection) {
           window.RTCPeerConnection = function(...args) {
             const pc = new originalValues.RTCPeerConnection(...args);
@@ -66,11 +63,10 @@ function initializeExtension() {
                     const ipAddress = fields[4];
                     const countryInfoDiv = document.querySelector('.countryInfo');
                     if (countryInfoDiv) {
-                      updateOrCreateDiv(
-                        countryInfoDiv,
-                        'ipAddress',
-                        \`
+                      const ipElementId = 'ipAddress';
+                      const initialContent = \`
                         <div>IP Address: \${ipAddress}</div>
+                        <div>Loading IP information...</div>
                         <button id="copyIPButton" style="
                           margin-top: 10px;
                           padding: 8px 12px;
@@ -82,9 +78,49 @@ function initializeExtension() {
                           font-size: 14px;
                         ">Copy IP</button>
                         <div style="color: red;">Thanks Salbeh</div>
-                        \`,
+                      \`;
+                      updateOrCreateDiv(
+                        countryInfoDiv,
+                        ipElementId,
+                        initialContent,
                         { marginLeft: '10px' }
                       );
+
+                      fetch(\`https://get.geojs.io/v1/ip/geo/\${ipAddress}.json\`)
+                        .then(response => response.json())
+                        .then(data => {
+                          const importantDetails = \`
+                            <div>Organization: \${data.organization_name}</div>
+                            <div>Location: \${data.city}, \${data.region}, \${data.country}</div>
+                            <div>Timezone: \${data.timezone}</div>
+                            <div>Coordinates: \${data.latitude}, \${data.longitude}</div>
+                          \`;
+                          const updatedContent = \`
+                            <div>IP Address: \${ipAddress}</div>
+                            \${importantDetails}
+                            <button id="copyIPButton" style="
+                              margin-top: 10px;
+                              padding: 8px 12px;
+                              background-color: #007bff;
+                              color: white;
+                              border: none;
+                              border-radius: 5px;
+                              cursor: pointer;
+                              font-size: 14px;
+                            ">Copy IP</button>
+                            <div style="color: red;">Thanks Salbeh</div>
+                          \`;
+                          const element = document.getElementById(ipElementId);
+                          if (element) element.innerHTML = updatedContent;
+                        })
+                        .catch(error => {
+                          console.error('Error fetching IP info:', error);
+                          const element = document.getElementById(ipElementId);
+                          if (element) {
+                            const errorDiv = element.querySelector('div:nth-child(2)');
+                            if (errorDiv) errorDiv.textContent = 'Failed to load IP details';
+                          }
+                        });
                     }
                   }
                 }
@@ -99,23 +135,15 @@ function initializeExtension() {
       }
 
       function stopMonitoring() {
-        if (originalValues.observer) {
-          originalValues.observer.disconnect();
-        }
+        if (originalValues.observer) originalValues.observer.disconnect();
         window.RTCPeerConnection = originalValues.RTCPeerConnection;
-        
-        // Cleanup DOM elements
         const ipElement = document.getElementById('ipAddress');
         if (ipElement) ipElement.remove();
-        
         const monitoredDivs = document.querySelectorAll('.monitoredSec1 div');
         monitoredDivs.forEach(div => div.textContent = '');
       }
 
-      // Start initial monitoring
       startMonitoring();
-
-      // Listen for cleanup events
       window.addEventListener('extensionDisable', stopMonitoring);
     })();
   `;
